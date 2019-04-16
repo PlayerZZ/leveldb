@@ -11,7 +11,7 @@ Authors: Sanjay Ghemawat (sanjay@google.com) and Jeff Dean (jeff@google.com)
   * Data is stored sorted by key.//有序存储
   * Callers can provide a custom comparison function to override the sort order.//支持自定义排序
   * The basic operations are `Put(key,value)`, `Get(key)`, `Delete(key)`.//基本操作
-  * Multiple changes can be made in<b> one atomic batch<\b> //这里原子操作的意思是事务提交么？
+  * Multiple changes can be made in<b> one atomic batch</b> //这里原子操作的意思是事务提交么？
   * Users can create a transient snapshot to get a consistent view of data.//快速获取值
   * Forward and backward iteration is supported over the data.//提供前向 逆向迭代器
   * Data is automatically compressed using the [Snappy compression library](http://google.github.io/snappy/).//使用snappy压缩?之前听过说有有protobuff ，一个是储存压缩，一个是传输压缩？

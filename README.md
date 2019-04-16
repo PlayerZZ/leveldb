@@ -19,7 +19,7 @@ Authors: Sanjay Ghemawat (sanjay@google.com) and Jeff Dean (jeff@google.com)
 
 # Documentation
 //带有源码的文档欸，nice
-  [LevelDB library documentation](https://github.com/google/leveldb/blob/master/doc/index.md) is online and bundled with the source code.
+  [LevelDB library documentation](https://github.com/PlayerZZ/leveldb/blob/master/doc/index.md) is online and bundled with the source code.
 
 # Limitations
 //不是sql数据库 没有关系数据模型，不支持sql查询 不支持下标访问（我一直想杠一下，跟map有啥区别……）

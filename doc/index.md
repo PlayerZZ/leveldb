@@ -19,6 +19,7 @@ shows how to open a database, creating it if necessary:
 
 leveldb::DB* db;
 leveldb::Options options;
+//这里的options 就是定义为一系列bool值 相当于open的时候会做一系列判断？
 options.create_if_missing = true;
 leveldb::Status status = leveldb::DB::Open(options, "/tmp/testdb", &db);
 assert(status.ok());
@@ -29,6 +30,7 @@ If you want to raise an error if the database already exists, add the following
 line before the `leveldb::DB::Open` call:
 
 ```c++
+//如果存在就报错 还有这种选项 斯国一
 options.error_if_exists = true;
 ```
 
@@ -39,6 +41,8 @@ returned by most functions in leveldb that may encounter an error. You can check
 if such a result is ok, and also print an associated error message:
 
 ```c++
+//status 目测主要就是记录是否发生错误的，貌似这种操作挺常见的 就是自己封装一套错误类一样，贼麻烦
+//我觉得用一个枚举类型或者map映射就挺好的……不然一个一个switch case也很难写啊
 leveldb::Status s = ...;
 if (!s.ok()) cerr << s.ToString() << endl;
 ```
@@ -50,6 +54,7 @@ When you are done with a database, just delete the database object. Example:
 ```c++
 ... open the db as described above ...
 ... do something with db ...
+//卧槽 直接delete 莫得close 会保存到本地波
 delete db;
 ```
 
@@ -60,6 +65,7 @@ For example, the following code moves the value stored under key1 to key2.
 
 ```c++
 std::string value;
+//使用std::string方数据啊？
 leveldb::Status s = db->Get(leveldb::ReadOptions(), key1, &value);
 if (s.ok()) s = db->Put(leveldb::WriteOptions(), key2, value);
 if (s.ok()) s = db->Delete(leveldb::WriteOptions(), key1);
@@ -70,7 +76,7 @@ if (s.ok()) s = db->Delete(leveldb::WriteOptions(), key1);
 Note that if the process dies after the Put of key2 but before the delete of
 key1, the same value may be left stored under multiple keys. Such problems can
 be avoided by using the `WriteBatch` class to atomically apply a set of updates:
-
+//果然跟我想的一样，就是事务提交……
 ```c++
 #include "leveldb/write_batch.h"
 ...
@@ -78,6 +84,8 @@ std::string value;
 leveldb::Status s = db->Get(leveldb::ReadOptions(), key1, &value);
 if (s.ok()) {
   leveldb::WriteBatch batch;
+  //目测delete key1 放在后面也一样…… 但是这样它内存释放就在后面了……emmm
+  //这里事务抽象成了一个类，直接调用的方法相当于add...
   batch.Delete(key1);
   batch.Put(key2, value);
   s = db->Write(leveldb::WriteOptions(), &batch);
@@ -87,7 +95,8 @@ if (s.ok()) {
 The `WriteBatch` holds a sequence of edits to be made to the database, and these
 edits within the batch are applied in order. Note that we called Delete before
 Put so that if key1 is identical to key2, we do not end up erroneously dropping
-the value entirely.
+the value entirely.（所以如果值相同，key2也会被删除么？还是说在原子操作中是这样的，
+必须要先delete 再put）
 
 Apart from its atomicity benefits, `WriteBatch` may also be used to speed up
 bulk updates by placing lots of individual mutations into the same batch.
@@ -105,10 +114,11 @@ operation returns.)
 
 ```c++
 leveldb::WriteOptions write_options;
+//同步选项，让你的数据真的写入了才返回
 write_options.sync = true;
 db->Put(write_options, ...);
 ```
-
+（机器崩了才会有一点影响，厉害了啊……）
 Asynchronous writes are often more than a thousand times as fast as synchronous
 writes. The downside of asynchronous writes is that a crash of the machine may
 cause the last few updates to be lost. Note that a crash of just the writing
@@ -116,6 +126,7 @@ process (i.e., not a reboot) will not cause any loss since even when sync is
 false, an update is pushed from the process memory into the operating system
 before it is considered done.
 
+（代替方案是过N次同步一次，这样至少保证了崩之前的N次保存下来了呢）
 Asynchronous writes can often be used safely. For example, when loading a large
 amount of data into the database you can handle lost updates by restarting the
 bulk load after a crash. A hybrid scheme is also possible where every Nth write
@@ -123,16 +134,17 @@ is synchronous, and in the event of a crash, the bulk load is restarted just
 after the last synchronous write finished by the previous run. (The synchronous
 write can update a marker that describes where to restart on a crash.)
 
+（批量写又是一种代替方案，一次性同步比多次同步的性价比高）
 `WriteBatch` provides an alternative to asynchronous writes. Multiple updates
 may be placed in the same WriteBatch and applied together using a synchronous
 write (i.e., `write_options.sync` is set to true). The extra cost of the
 synchronous write will be amortized across all of the writes in the batch.
 
 ## Concurrency
-
+(这个锁协议是在option里面还是自己加锁……)
 A database may only be opened by one process at a time. The leveldb
 implementation acquires a lock from the operating system to prevent misuse.
-Within a single process, the same `leveldb::DB` object may be safely shared by
+Within a single process, the same `leveldb::DB` object <b>may be safely</b> shared by
 multiple concurrent threads. I.e., different threads may write into or fetch
 iterators or call Get on the same database without any external synchronization
 (the leveldb implementation will automatically do the required synchronization).
@@ -148,6 +160,7 @@ database.
 
 ```c++
 leveldb::Iterator* it = db->NewIterator(leveldb::ReadOptions());
+//NB额，迭代器自己负责头和尾 有这个迭代器 db就不用管了……
 for (it->SeekToFirst(); it->Valid(); it->Next()) {
   cout << it->key().ToString() << ": "  << it->value().ToString() << endl;
 }
@@ -159,6 +172,7 @@ The following variation shows how to process just the keys in the range
 [start,limit):
 
 ```c++
+//emmm 因为它说了 是按key 排序的 所以可以这儿玩
 for (it->Seek(start);
    it->Valid() && it->key().ToString() < limit;
    it->Next()) {
@@ -186,6 +200,7 @@ of the current state.
 Snapshots are created by the `DB::GetSnapshot()` method:
 
 ```c++
+//当获取到了非空就是一个特定状态的，如果是空，那就是当前状态的
 leveldb::ReadOptions options;
 options.snapshot = db->GetSnapshot();
 ... apply some updates to db ...
@@ -200,7 +215,8 @@ Note that when a snapshot is no longer needed, it should be released using the
 state that was being maintained just to support reading as of that snapshot.
 
 ## Slice
-
+//这里的slice 似乎和其他语言的slice不一样，其他语言都是指的一段数据
+//因为key value可以是任意类型，所以它内部不一定有\0结尾 所以数据长度也需要保存下来，就有了slice
 The return value of the `it->key()` and `it->value()` calls above are instances
 of the `leveldb::Slice` type. Slice is a simple structure that contains a length
 and a pointer to an external byte array. Returning a Slice is a cheaper
@@ -222,6 +238,7 @@ leveldb::Slice s2 = str;
 A Slice can be easily converted back to a C++ string:
 
 ```c++
+//就跟qt的varirant 类似的
 std::string str = s1.ToString();
 assert(str == std::string("hello"));
 ```
@@ -231,6 +248,7 @@ external byte array into which the Slice points remains live while the Slice is
 in use. For example, the following is buggy:
 
 ```c++
+//那string 还需要弄一个copy? 目测有一个拷贝宏就好了
 leveldb::Slice slice;
 if (...) {
   std::string str = ...;
@@ -251,6 +269,7 @@ we should sort by the first number, breaking ties by the second number. First,
 define a proper subclass of `leveldb::Comparator` that expresses these rules:
 
 ```c++
+//继承一个Comparator 然后比较两个slice就行了
 class TwoPartComparator : public leveldb::Comparator {
  public:
   // Three-way comparison function:
@@ -269,6 +288,7 @@ class TwoPartComparator : public leveldb::Comparator {
   }
 
   // Ignore the following methods for now:
+  //官方吐槽？
   const char* Name() const { return "TwoPartComparator"; }
   void FindShortestSeparator(std::string*, const leveldb::Slice&) const {}
   void FindShortSuccessor(std::string*) const {}
@@ -282,6 +302,7 @@ TwoPartComparator cmp;
 leveldb::DB* db;
 leveldb::Options options;
 options.create_if_missing = true;
+//是在option里面设置
 options.comparator = &cmp;
 leveldb::Status status = leveldb::DB::Open(options, "/tmp/testdb", &db);
 ...

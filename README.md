@@ -6,29 +6,32 @@
 Authors: Sanjay Ghemawat (sanjay@google.com) and Jeff Dean (jeff@google.com)
 
 # Features
-
-  * Keys and values are arbitrary byte arrays.
-  * Data is stored sorted by key.
-  * Callers can provide a custom comparison function to override the sort order.
-  * The basic operations are `Put(key,value)`, `Get(key)`, `Delete(key)`.
-  * Multiple changes can be made in one atomic batch.
-  * Users can create a transient snapshot to get a consistent view of data.
-  * Forward and backward iteration is supported over the data.
-  * Data is automatically compressed using the [Snappy compression library](http://google.github.io/snappy/).
-  * External activity (file system operations etc.) is relayed through a virtual interface so users can customize the operating system interactions.
+ 
+  * Keys and values are arbitrary byte arrays.//意思是支持任意类型？
+  * Data is stored sorted by key.//有序存储
+  * Callers can provide a custom comparison function to override the sort order.//支持自定义排序
+  * The basic operations are `Put(key,value)`, `Get(key)`, `Delete(key)`.//基本操作
+  * Multiple changes can be made in<b> one atomic batch<\b> //这里原子操作的意思是事务提交么？
+  * Users can create a transient snapshot to get a consistent view of data.//快速获取值
+  * Forward and backward iteration is supported over the data.//提供前向 逆向迭代器
+  * Data is automatically compressed using the [Snappy compression library](http://google.github.io/snappy/).//使用snappy压缩?之前听过说有有protobuff ，一个是储存压缩，一个是传输压缩？
+  * External activity (file system operations etc.) is relayed through a virtual interface so users can customize the operating system interactions.//因为是虚继承，所以可以自定义？
 
 # Documentation
-
+//带有源码的文档欸，nice
   [LevelDB library documentation](https://github.com/google/leveldb/blob/master/doc/index.md) is online and bundled with the source code.
 
 # Limitations
-
+//不是sql数据库 没有关系数据模型，不支持sql查询 不支持下标访问（我一直想杠一下，跟map有啥区别……）
   * This is not a SQL database.  It does not have a relational data model, it does not support SQL queries, and it has no support for indexes.
+ //emmm 可能多线程是什么鬼 
   * Only a single process (possibly multi-threaded) can access a particular database at a time.
+ //就只能单机使用嘛
   * There is no client-server support builtin to the library.  An application that needs such support will have to wrap their own server around the library.
 
 # Building
-
+<details>
+<summary>目前对我来说没用 折叠先</summary>
 This project supports [CMake](https://cmake.org/) out of the box.
 
 ### Build for POSIX
@@ -175,7 +178,7 @@ uncompressed blocks in memory, the read performance improves again:
 
     readrandom  : 9.775 micros/op;  (approximately 100,000 reads per second before compaction)
     readrandom  : 5.215 micros/op;  (approximately 190,000 reads per second after compaction)
-
+</details>
 ## Repository contents
 
 See [doc/index.md](doc/index.md) for more explanation. See

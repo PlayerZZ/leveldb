@@ -35,8 +35,11 @@ include(CheckIncludeFile)
 check_include_file("unistd.h" HAVE_UNISTD_H)
 
 include(CheckLibraryExists)
+#数据校验库
 check_library_exists(crc32c crc32c_value "" HAVE_CRC32C)
+#压缩用的
 check_library_exists(snappy snappy_compress "" HAVE_SNAPPY)
+#内存分析工具……
 check_library_exists(tcmalloc malloc "" HAVE_TCMALLOC)
 
 include(CheckCXXSymbolExists)
@@ -53,6 +56,7 @@ include(CheckCXXSourceCompiles)
 # Test whether -Wthread-safety is available. See
 # https://clang.llvm.org/docs/ThreadSafetyAnalysis.html
 # -Werror is necessary because unknown attributes only generate warnings.
+#先用这几个编译选项编译玩一下 看一下能不能通过
 set(OLD_CMAKE_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS})
 list(APPEND CMAKE_REQUIRED_FLAGS -Werror -Wthread-safety)
 check_cxx_source_compiles("
@@ -70,6 +74,7 @@ set(CMAKE_REQUIRED_FLAGS ${OLD_CMAKE_REQUIRED_FLAGS})
 
 # Test whether C++17 __has_include is available.
 check_cxx_source_compiles("
+//has_include 意思是可以包含……
 #if defined(__has_include) &&  __has_include(<string>)
 #include <string>
 #endif
@@ -269,7 +274,7 @@ if(LEVELDB_BUILD_TESTS)
 
   function(leveldb_test test_file)
     get_filename_component(test_target_name "${test_file}" NAME_WE)
-
+#原来是这这儿添加的
     add_executable("${test_target_name}" "")
     target_sources("${test_target_name}"
       PRIVATE
